@@ -33,7 +33,7 @@ python run_api.py
 
 **Option B: Using uvicorn directly**
 ```bash
-uvicorn src.api.main:app --reload
+uvicorn src.api.Agriculture_Crop_Production_Prediction_System:app --reload
 ```
 
 The API will be available at:

@@ -51,7 +51,7 @@ python main.py
 
 Or using uvicorn directly:
 ```bash
-uvicorn src.api.main:app --reload
+uvicorn src.api.Agriculture_Crop_Production_Prediction_System:app --reload
 ```
 
 The API will be available at: `http://localhost:8000`
@@ -70,7 +70,7 @@ The dashboard will open in your browser automatically.
 
 **Terminal 1 - Start API:**
 ```bash
-uvicorn src.api.main:app --reload
+uvicorn src.api.Agriculture_Crop_Production_Prediction_System:app --reload
 ```
 
 **Terminal 2 - Start Dashboard:**
@@ -160,7 +160,7 @@ Project/
 
 **Solution**: Change the port
 ```bash
-uvicorn src.api.main:app --reload --port 8001
+uvicorn src.api.Agriculture_Crop_Production_Prediction_System:app --reload --port 8001
 ```
 
 ### Issue: Module not found

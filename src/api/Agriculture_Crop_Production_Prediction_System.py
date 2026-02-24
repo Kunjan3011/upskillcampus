@@ -2,7 +2,7 @@
 FastAPI Main Application
 
 This is the main FastAPI application for the Agriculture Crop Production
-Prediction API.
+Prediction System.
 """
 
 import sys
@@ -26,7 +26,7 @@ from src.clustering.kmeans_clustering import ProductivityZoneClusterer
 from src.utils.data_loader import load_data
 
 app = FastAPI(
-    title="Agriculture Crop Production Prediction API",
+    title="Agriculture Crop Production Prediction System",
     description="API for predicting crop yields, production trends, and profitability",
     version="1.0.0"
 )
@@ -46,20 +46,21 @@ clusterer = None
 df_data = None
 _models_loading = False
 
+
 def load_models_background():
     """Load models in background (synchronous)."""
     global ensemble_predictor, clusterer, df_data, _models_loading
     if _models_loading:
         return  # Already loading
-    
+
     _models_loading = True
     try:
         print("Loading models and data...")
-        
+
         # Load ensemble predictor
         ensemble_predictor = EnsembleYieldPredictor()
         ensemble_predictor.load_models()
-        
+
         # Load clustering model
         clusterer_path = Path("models/saved_models/kmeans_clusterer.joblib")
         if clusterer_path.exists():
@@ -68,11 +69,11 @@ def load_models_background():
         else:
             clusterer = None
             print("[WARNING] Clustering model not found")
-        
+
         # Load data (use direct path for speed)
         df_data = load_data("data/raw/crop_production_data.csv")
         print(f"[OK] Data loaded: {len(df_data)} rows")
-        
+
         print("[OK] All models and data loaded successfully!")
     except Exception as e:
         print(f"[WARNING] Warning during startup: {e}")
@@ -80,11 +81,13 @@ def load_models_background():
     finally:
         _models_loading = False
 
+
 @app.on_event("startup")
 async def startup_event():
     """Start API immediately, load models in background."""
     # Don't block - start loading models in background
     import threading
+
     thread = threading.Thread(target=load_models_background, daemon=True)
     thread.start()
 
@@ -132,31 +135,36 @@ class RecommendationsRequest(BaseModel):
 async def root():
     """Root endpoint - instant response."""
     return {
-        "message": "Agriculture Crop Production Prediction API",
+        "message": "Agriculture Crop Production Prediction System",
         "status": "running",
         "models_loading": _models_loading,
         "models_ready": ensemble_predictor is not None and ensemble_predictor.is_loaded,
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
+
 
 # Health Check Endpoint
 @app.get("/health")
 async def health_check():
     """Check API health and model availability."""
     models_loaded = {
-        "random_forest": ensemble_predictor.rf_model is not None if ensemble_predictor else False,
-        "xgboost": ensemble_predictor.xgb_model is not None if ensemble_predictor else False,
+        "random_forest": ensemble_predictor.rf_model is not None
+        if ensemble_predictor
+        else False,
+        "xgboost": ensemble_predictor.xgb_model is not None
+        if ensemble_predictor
+        else False,
         "arima": True,  # Available as fallback
         "prophet": True,  # Available as fallback
-        "clustering": clusterer is not None
+        "clustering": clusterer is not None,
     }
-    
+
     return {
         "status": "healthy",
         "models_loaded": models_loaded,
         "data_loaded": df_data is not None,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
@@ -165,7 +173,7 @@ async def health_check():
 async def predict_yield(request: YieldPredictionRequest):
     """
     Predict crop yield for given parameters.
-    
+
     This endpoint uses hybrid ML models (Random Forest, XGBoost, ARIMA, Prophet)
     to predict crop yield.
     """
@@ -176,7 +184,7 @@ async def predict_yield(request: YieldPredictionRequest):
             predictor = ensemble_predictor_local
         else:
             predictor = ensemble_predictor
-        
+
         # Get prediction
         result = predictor.predict_yield(
             crop=request.crop,
@@ -184,15 +192,15 @@ async def predict_yield(request: YieldPredictionRequest):
             season=request.season,
             year=request.year,
             cost=request.cost,
-            df=df_data
+            df=df_data,
         )
-        
+
         return YieldPredictionResponse(
-            predicted_yield=result['predicted_yield'],
+            predicted_yield=result["predicted_yield"],
             unit="Quintals/Hectare",
-            confidence_interval=result['confidence_interval'],
-            model_used=result['model_used'],
-            timestamp=datetime.utcnow().isoformat()
+            confidence_interval=result["confidence_interval"],
+            model_used=result["model_used"],
+            timestamp=datetime.utcnow().isoformat(),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
@@ -211,26 +219,26 @@ async def predict_production(request: ProductionForecastRequest):
             predictor = ensemble_predictor_local
         else:
             predictor = ensemble_predictor
-        
+
         if df_data is None:
             df_data_local = load_data()
         else:
             df_data_local = df_data
-        
+
         # Get forecast
         result = predictor.predict_production_trends(
             crop=request.crop,
             state=request.state,
             start_year=request.start_year,
             end_year=request.end_year,
-            df=df_data_local
+            df=df_data_local,
         )
-        
+
         return {
-            "forecast": result['forecast'],
-            "trend": result['trend'],
-            "model_used": result['model_used'],
-            "timestamp": datetime.utcnow().isoformat()
+            "forecast": result["forecast"],
+            "trend": result["trend"],
+            "model_used": result["model_used"],
+            "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Forecast error: {str(e)}")
@@ -250,7 +258,7 @@ async def calculate_profitability(request: ProfitabilityRequest):
             predictor = ensemble_predictor_local
         else:
             predictor = ensemble_predictor
-        
+
         # Predict yield (using average season and current year)
         yield_result = predictor.predict_yield(
             crop=request.crop,
@@ -258,23 +266,25 @@ async def calculate_profitability(request: ProfitabilityRequest):
             season="Kharif",  # Default season
             year=2024,  # Current year
             cost=request.cost,
-            df=df_data
+            df=df_data,
         )
-        
-        predicted_yield = yield_result['predicted_yield']
-        
+
+        predicted_yield = yield_result["predicted_yield"]
+
         # Calculate profitability
         profitability = calculate_profitability_index(
             predicted_yield=predicted_yield,
             market_price=request.market_price,
-            cost=request.cost
+            cost=request.cost,
         )
-        
-        profitability['timestamp'] = datetime.utcnow().isoformat()
-        
+
+        profitability["timestamp"] = datetime.utcnow().isoformat()
+
         return profitability
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Profitability calculation error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Profitability calculation error: {str(e)}"
+        )
 
 
 # Get Recommendations Endpoint
@@ -288,55 +298,77 @@ async def get_recommendations(request: RecommendationsRequest):
             df_data_local = load_data()
         else:
             df_data_local = df_data
-        
+
         # Get unique crops
-        crops = df_data_local['Crop'].unique().tolist()
-        
+        crops = df_data_local["Crop"].unique().tolist()
+
         # Get zone for state
         zone_name = "Unknown Zone"
         if clusterer is not None:
             try:
-                state_data = df_data_local[df_data_local['State'] == request.state]
+                state_data = df_data_local[df_data_local["State"] == request.state]
                 if len(state_data) > 0:
-                    state_agg = state_data.groupby('State').agg({
-                        'Quantity': 'mean',
-                        'Cost': 'mean',
-                        'Production': 'mean'
-                    }).reset_index()
-                    state_agg.columns = ['State', 'Avg_Quantity', 'Avg_Cost', 'Avg_Production']
-                    
+                    state_agg = state_data.groupby("State").agg(
+                        {
+                            "Quantity": "mean",
+                            "Cost": "mean",
+                            "Production": "mean",
+                        }
+                    ).reset_index()
+                    state_agg.columns = [
+                        "State",
+                        "Avg_Quantity",
+                        "Avg_Cost",
+                        "Avg_Production",
+                    ]
+
                     if len(state_agg) > 0:
                         zone_id = clusterer.predict_zone(state_agg.iloc[0].to_dict())
                         zone_name = f"Zone {zone_id + 1}"
-            except:
+            except Exception:
                 pass
-        
+
         # Get recommendations for each crop
         recommendations = []
         market_prices = {
-            'Rice': 2000, 'Wheat': 1800, 'Cotton': 6500, 'Soybean': 4000,
-            'Sugarcane': 3000, 'Maize': 1500, 'Groundnut': 5000,
-            'Pulses': 6000, 'Oilseeds': 4500, 'Jute': 3500
+            "Rice": 2000,
+            "Wheat": 1800,
+            "Cotton": 6500,
+            "Soybean": 4000,
+            "Sugarcane": 3000,
+            "Maize": 1500,
+            "Groundnut": 5000,
+            "Pulses": 6000,
+            "Oilseeds": 4500,
+            "Jute": 3500,
         }
-        
+
         if ensemble_predictor is None:
             ensemble_predictor_local = EnsembleYieldPredictor()
             ensemble_predictor_local.load_models()
             predictor = ensemble_predictor_local
         else:
             predictor = ensemble_predictor
-        
+
         for crop in crops[:10]:  # Limit to top 10 crops for performance
             try:
                 # Estimate cost (use average or budget-based)
-                estimated_cost = min(request.budget, df_data_local[
-                    (df_data_local['Crop'] == crop) & 
-                    (df_data_local['State'] == request.state)
-                ]['Cost'].mean() if len(df_data_local[
-                    (df_data_local['Crop'] == crop) & 
-                    (df_data_local['State'] == request.state)
-                ]) > 0 else request.budget * 0.8)
-                
+                estimated_cost = min(
+                    request.budget,
+                    df_data_local[
+                        (df_data_local["Crop"] == crop)
+                        & (df_data_local["State"] == request.state)
+                    ]["Cost"].mean()
+                    if len(
+                        df_data_local[
+                            (df_data_local["Crop"] == crop)
+                            & (df_data_local["State"] == request.state)
+                        ]
+                    )
+                    > 0
+                    else request.budget * 0.8,
+                )
+
                 # Predict yield
                 yield_result = predictor.predict_yield(
                     crop=crop,
@@ -344,42 +376,44 @@ async def get_recommendations(request: RecommendationsRequest):
                     season=request.season,
                     year=2024,
                     cost=estimated_cost,
-                    df=df_data_local
+                    df=df_data_local,
                 )
-                
-                predicted_yield = yield_result['predicted_yield']
+
+                predicted_yield = yield_result["predicted_yield"]
                 market_price = market_prices.get(crop, 2000)
-                
+
                 # Calculate profitability
                 profitability = calculate_profitability_index(
                     predicted_yield=predicted_yield,
                     market_price=market_price,
-                    cost=estimated_cost
+                    cost=estimated_cost,
                 )
-                
-                recommendations.append({
-                    "crop": crop,
-                    "rank": 0,  # Will be set after sorting
-                    "profitability_index": profitability['profitability_index'],
-                    "predicted_yield": predicted_yield,
-                    "estimated_cost": estimated_cost,
-                    "expected_revenue": profitability['expected_revenue'],
-                    "expected_profit": profitability['expected_profit'],
-                    "reason": profitability['recommendation']
-                })
-            except Exception as e:
+
+                recommendations.append(
+                    {
+                        "crop": crop,
+                        "rank": 0,  # Will be set after sorting
+                        "profitability_index": profitability["profitability_index"],
+                        "predicted_yield": predicted_yield,
+                        "estimated_cost": estimated_cost,
+                        "expected_revenue": profitability["expected_revenue"],
+                        "expected_profit": profitability["expected_profit"],
+                        "reason": profitability["recommendation"],
+                    }
+                )
+            except Exception:
                 continue
-        
+
         # Sort by profitability and rank
-        recommendations.sort(key=lambda x: x['profitability_index'], reverse=True)
+        recommendations.sort(key=lambda x: x["profitability_index"], reverse=True)
         for i, rec in enumerate(recommendations, 1):
-            rec['rank'] = i
-        
+            rec["rank"] = i
+
         return {
             "state": request.state,
             "zone": zone_name,
-            "recommendations": recommendations[:request.top_n],
-            "timestamp": datetime.utcnow().isoformat()
+            "recommendations": recommendations[: request.top_n],
+            "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendations error: {str(e)}")
@@ -405,8 +439,8 @@ async def get_zones():
                     "characteristics": {
                         "soil_type": "Alluvial",
                         "irrigation": "Well-irrigated",
-                        "climate": "Favorable"
-                    }
+                        "climate": "Favorable",
+                    },
                 }
             ]
         else:
@@ -418,22 +452,31 @@ async def get_zones():
             else:
                 # Generate zones from current data
                 if df_data is not None:
-                    state_agg = df_data.groupby('State').agg({
-                        'Quantity': 'mean',
-                        'Cost': 'mean',
-                        'Production': 'mean'
-                    }).reset_index()
-                    state_agg.columns = ['State', 'Avg_Quantity', 'Avg_Cost', 'Avg_Production']
-                    state_agg['Zone'] = [clusterer.predict_zone(row.to_dict()) 
-                                        for _, row in state_agg.iterrows()]
+                    state_agg = df_data.groupby("State").agg(
+                        {
+                            "Quantity": "mean",
+                            "Cost": "mean",
+                            "Production": "mean",
+                        }
+                    ).reset_index()
+                    state_agg.columns = [
+                        "State",
+                        "Avg_Quantity",
+                        "Avg_Cost",
+                        "Avg_Production",
+                    ]
+                    state_agg["Zone"] = [
+                        clusterer.predict_zone(row.to_dict())
+                        for _, row in state_agg.iterrows()
+                    ]
                     zones = clusterer.get_zone_characteristics(state_agg)
                 else:
                     zones = []
-        
+
         return {
             "zones": zones,
             "total_zones": len(zones),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Zones retrieval error: {str(e)}")
@@ -441,5 +484,6 @@ async def get_zones():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
 

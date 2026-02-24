@@ -127,7 +127,7 @@ python run_api.py
 
 **Or alternatively:**
 ```bash
-uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn src.api.Agriculture_Crop_Production_Prediction_System:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **What Happens:**

@@ -21,7 +21,7 @@ If you want to access the API from another device on the same network:
    ```python
    # Already set to 0.0.0.0 which allows network access
    uvicorn.run(
-       "src.api.main:app",
+       "src.api.Agriculture_Crop_Production_Prediction_System:app",
        host="0.0.0.0",  # This allows network access
        port=8000,
        ...
@@ -94,7 +94,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.api.Agriculture_Crop_Production_Prediction_System:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ## Security Considerations

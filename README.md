@@ -1,4 +1,4 @@
-# Prediction of Agriculture Crop Production in India
+# Agriculture Crop Production Prediction System
 
 ## 📋 Project Overview
 
@@ -133,7 +133,7 @@ pip install -r requirements.txt
 1. **Start the FastAPI backend**:
 ```bash
 cd src/api
-uvicorn main:app --reload
+uvicorn Agriculture_Crop_Production_Prediction_System:app --reload
 ```
 
 2. **Launch the Streamlit dashboard**:
