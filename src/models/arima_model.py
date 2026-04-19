@@ -188,14 +188,42 @@ def prepare_time_series(df: pd.DataFrame, crop: str, state: str) -> pd.Series:
     Returns:
         Time series of production/yield
     """
-    # Filter data
-    filtered = df[(df['Crop'] == crop) & (df['State'] == state)].copy()
-    
+    # Filter data (case-insensitive) and map common crop synonyms to dataset labels.
+    crop_norm_req = str(crop).strip().upper()
+    state_norm_req = str(state).strip().upper()
+
+    crop_norm_col = df["Crop"].astype(str).str.strip().str.upper()
+    state_norm_col = df["State"].astype(str).str.strip().str.upper()
+    available_crops = set(crop_norm_col.unique())
+
+    crop_synonyms = {
+        # Your UI uses "Rice" but the dataset uses "PADDY"
+        "RICE": ["PADDY"],
+        # Dataset may not have a literal "SOYBEAN" label; fall back to other legume crops if present.
+        "SOYBEAN": ["GRAM", "MOONG", "GROUNDNUT"],
+    }
+
+    resolved_crop = crop_norm_req if crop_norm_req in available_crops else None
+    if resolved_crop is None:
+        for candidate in crop_synonyms.get(crop_norm_req, []):
+            if candidate in available_crops:
+                resolved_crop = candidate
+                break
+
+    if resolved_crop is None:
+        filtered = df.iloc[0:0].copy()
+    else:
+        filtered = df[(crop_norm_col == resolved_crop) & (state_norm_col == state_norm_req)].copy()
+
     if len(filtered) == 0:
         raise ValueError(f"No data found for {crop} in {state}")
     
     # Group by year and aggregate
-    time_series = filtered.groupby('Year')['Production'].mean().sort_index()
+    filtered["Year"] = pd.to_numeric(filtered["Year"], errors="coerce")
+    filtered["Production"] = pd.to_numeric(filtered["Production"], errors="coerce")
+    filtered = filtered.dropna(subset=["Year", "Production"])
+
+    time_series = filtered.groupby("Year")["Production"].mean().sort_index()
     
     return time_series
 
